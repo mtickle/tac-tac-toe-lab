@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 // --- Database Utility Functions ---
 // (Previously in storageUtils.js, now included directly)
 async function saveThingsToDatabase(endpoint, data) {
-  let apiUrl = 'http://localhost:3001/api/' + endpoint;
-  //let apiUrl = 'https://game-api-zjod.onrender.com/api/' + endpoint;
+  //let apiUrl = 'http://localhost:3001/api/' + endpoint;
+  let apiUrl = 'https://game-api-zjod.onrender.com/api/' + endpoint;
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -20,8 +20,8 @@ async function saveThingsToDatabase(endpoint, data) {
 
 async function loadThingsFromDatabase(endpoint, ...params) {
   try {
-    const apiUrl = `http://localhost:3001/api/${endpoint}/${params.join('/')}`;
-    //const apiUrl = `https://game-api-zjod.onrender.com/api/${endpoint}/${params.join('/')}`;
+    //const apiUrl = `http://localhost:3001/api/${endpoint}/${params.join('/')}`;
+    const apiUrl = `https://game-api-zjod.onrender.com/api/${endpoint}/${params.join('/')}`;
     const response = await fetch(apiUrl, {
       headers: {
         'Cache-Control': 'no-cache',
