@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/noughts-and-crosses-lab/',
+  base: '/noughts-and-crosses-lab',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
