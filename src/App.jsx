@@ -3,8 +3,9 @@ import { useCallback, useEffect, useState } from 'react';
 // --- Database Utility Functions ---
 // (Previously in storageUtils.js, now included directly)
 async function saveThingsToDatabase(endpoint, data) {
-  //let apiUrl = 'http://localhost:3001/api/' + endpoint;
+  // Using a placeholder URL, replace with your actual Render/production URL
   let apiUrl = 'https://game-api-zjod.onrender.com/api/' + endpoint;
+  // let apiUrl = 'http://localhost:3001/api/' + endpoint; 
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -20,8 +21,9 @@ async function saveThingsToDatabase(endpoint, data) {
 
 async function loadThingsFromDatabase(endpoint, ...params) {
   try {
-    //const apiUrl = `http://localhost:3001/api/${endpoint}/${params.join('/')}`;
+    // Using a placeholder URL, replace with your actual Render/production URL
     const apiUrl = `https://game-api-zjod.onrender.com/api/${endpoint}/${params.join('/')}`;
+    // const apiUrl = `http://localhost:3001/api/${endpoint}/${params.join('/')}`;
     const response = await fetch(apiUrl, {
       headers: {
         'Cache-Control': 'no-cache',
@@ -135,7 +137,6 @@ function App() {
   }, []);
 
   // Effect for handling the game result and batching data.
-  // This is a separate effect to avoid re-running complex logic unnecessarily.
   useEffect(() => {
     const gameResult = calculateWinner(squares);
     const winner = gameResult ? gameResult.winner : null;
@@ -183,7 +184,7 @@ function App() {
         setSquares(Array(9).fill(null));
         setMoveHistory([]);
         setIsXNext(true);
-      }, speed * 2); // Pause to show winning line
+      }, speed * 2);
       return;
     }
 
@@ -227,13 +228,16 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 font-sans">
-      <div className="bg-gray-800/50 p-6 md:p-8 rounded-2xl shadow-2xl backdrop-blur-sm border border-gray-700 w-full max-w-4xl">
-        <h1 className="text-4xl md:text-5xl font-bold mb-6 pb-3 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-yellow-400">
+      <div className="bg-gray-800/50 p-6 md:p-8 rounded-2xl shadow-2xl backdrop-blur-sm border border-gray-700 w-full max-w-7xl">
+        <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-yellow-400">
           Noughts and Crosses AI Lab
         </h1>
 
-        <div className="flex flex-col md:flex-row gap-8 md:gap-12 justify-center">
-          <div className="relative flex justify-center items-center">
+        {/* Main Content Area: Now a 3-column layout on large screens */}
+        <div className="flex flex-col lg:flex-row gap-8 md:gap-12 justify-center items-start">
+
+          {/* Column 1: Game Board */}
+          <div className="relative flex-shrink-0 flex justify-center items-center">
             <div className="grid grid-cols-3 gap-3">
               {squares.map((value, i) => (
                 <Square key={i} value={value} />
@@ -248,7 +252,8 @@ function App() {
             )}
           </div>
 
-          <div className="flex flex-col justify-center gap-8 w-full md:w-64">
+          {/* Column 2: Stats and Controls */}
+          <div className="flex flex-col justify-start gap-8 w-full lg:w-64 flex-shrink-0">
             <div className="w-full text-center bg-gray-900/50 p-4 rounded-lg border border-gray-700">
               <h2 className="text-2xl font-bold mb-4 text-gray-300">Live Stats</h2>
               <div className="space-y-2 text-lg">
@@ -275,26 +280,28 @@ function App() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Game History Section */}
-        <div className="mt-10 pt-6 border-t border-gray-700">
-          <h2 className="text-3xl font-bold text-center mb-4 text-gray-300">Recent Game History</h2>
-          <div className="max-h-96 overflow-y-auto pr-2 space-y-3">
-            {gameHistory && gameHistory.length > 0 ? gameHistory.map(game => (
-              <div key={game.id} className="bg-gray-900/50 p-3 rounded-lg flex items-center justify-between border border-gray-700 gap-4">
-                <MiniBoard finalBoardState={game.final_board_state} />
-                <div className="flex-grow text-left">
-                  <p className={`font-bold ${game.outcome.includes('X') ? 'text-cyan-400' : game.outcome.includes('O') ? 'text-yellow-400' : 'text-gray-400'}`}>
-                    {game.outcome}
-                  </p>
-                  <p className="text-sm text-gray-500">{game.total_moves} moves</p>
-                </div>
-                <p className="text-xs text-gray-500">{new Date(game.finished_at).toLocaleString()}</p>
+          {/* Column 3: Game History Section */}
+          <div className="w-full lg:flex-1">
+            <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+              <h2 className="text-2xl font-bold text-center mb-4 text-gray-300">Recent Game History</h2>
+              <div className="max-h-[24.5rem] overflow-y-auto pr-2 space-y-3">
+                {gameHistory && gameHistory.length > 0 ? gameHistory.map(game => (
+                  <div key={game.id} className="bg-gray-900/50 p-3 rounded-lg flex items-center justify-between border border-gray-700 gap-4">
+                    <MiniBoard finalBoardState={game.final_board_state} />
+                    <div className="flex-grow text-left">
+                      <p className={`font-bold ${game.outcome.includes('X') ? 'text-cyan-400' : game.outcome.includes('O') ? 'text-yellow-400' : 'text-gray-400'}`}>
+                        {game.outcome}
+                      </p>
+                      <p className="text-sm text-gray-500">{game.total_moves} moves</p>
+                    </div>
+                    <p className="text-xs text-gray-500">{new Date(game.finished_at).toLocaleString()}</p>
+                  </div>
+                )) : (
+                  <p className="text-center text-gray-500">Loading game history or no games found...</p>
+                )}
               </div>
-            )) : (
-              <p className="text-center text-gray-500">Loading game history or no games found...</p>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -303,3 +310,4 @@ function App() {
 }
 
 export default App;
+
