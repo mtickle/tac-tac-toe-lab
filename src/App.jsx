@@ -230,7 +230,7 @@ function App() {
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 font-sans">
       <div className="bg-gray-800/50 p-6 md:p-8 rounded-2xl shadow-2xl backdrop-blur-sm border border-gray-700 w-full max-w-7xl">
         <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-yellow-400">
-          Noughts and Crosses AI Lab
+          Tic-Tac-Toe AI Lab
         </h1>
 
         {/* Main Content Area: Now a 3-column layout on large screens */}
