@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 // --- Database Utility Functions ---
-// (Previously in storageUtils.js, now included directly)
 async function saveThingsToDatabase(endpoint, data) {
-  // Using a placeholder URL, replace with your actual Render/production URL
   let apiUrl = 'https://game-api-zjod.onrender.com/api/' + endpoint;
   // let apiUrl = 'http://localhost:3001/api/' + endpoint; 
   try {
@@ -21,7 +19,6 @@ async function saveThingsToDatabase(endpoint, data) {
 
 async function loadThingsFromDatabase(endpoint, ...params) {
   try {
-    // Using a placeholder URL, replace with your actual Render/production URL
     const apiUrl = `https://game-api-zjod.onrender.com/api/${endpoint}/${params.join('/')}`;
     // const apiUrl = `http://localhost:3001/api/${endpoint}/${params.join('/')}`;
     const response = await fetch(apiUrl, {
@@ -40,30 +37,28 @@ async function loadThingsFromDatabase(endpoint, ...params) {
 }
 // --- End of Database Utility Functions ---
 
-
-// A reusable Square component representing each cell on the board.
+// --- UI Components ---
 const Square = ({ value }) => (
   <div
     className="w-24 h-24 md:w-28 md:h-28 bg-gray-800 rounded-lg flex items-center justify-center text-5xl md:text-6xl font-bold shadow-lg transition-colors duration-300"
-    aria-label={`Square with value ${value || 'empty'}`}
   >
     {value === 'X' ? <span className="text-cyan-400">X</span> : <span className="text-yellow-400">{value}</span>}
   </div>
 );
 
-// A smaller version of the Square for the history display.
 const MiniSquare = ({ value }) => (
   <div className="w-5 h-5 bg-gray-700 rounded-sm flex items-center justify-center text-xs font-bold">
     {value === 'X' ? <span className="text-cyan-500">X</span> : <span className="text-yellow-500">{value}</span>}
   </div>
 );
 
-// A component to render the small preview of the final board state.
 const MiniBoard = ({ finalBoardState }) => (
   <div className="grid grid-cols-3 gap-0.5">
     {(finalBoardState || []).map((square, i) => <MiniSquare key={i} value={square} />)}
   </div>
 );
+// --- End of UI Components ---
+
 
 // Helper function to determine the winner of the game.
 const calculateWinner = (squares) => {
@@ -89,27 +84,32 @@ function App() {
   const [winningLine, setWinningLine] = useState(null);
   const [moveHistory, setMoveHistory] = useState([]);
   const [gameResultsBatch, setGameResultsBatch] = useState([]);
-  const [gameHistory, setGameHistory] = useState([]); // State for historical games from DB
+  const [gameHistory, setGameHistory] = useState([]);
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(250);
 
-  // Fetch historical game data when the component first loads.
+  // Memoized function to fetch history data from the database.
+  const fetchHistory = useCallback(async () => {
+    console.log("Refreshing game history...");
+    const historyData = await loadThingsFromDatabase('getTicTacToeGames');
+    if (historyData) {
+      setGameHistory(historyData);
+    }
+  }, []);
+
+  // Effect to fetch history on initial load and then periodically.
   useEffect(() => {
-    const fetchHistory = async () => {
-      const historyData = await loadThingsFromDatabase('getTicTacToeGames');
-      if (historyData) {
-        setGameHistory(historyData);
-      }
-    };
-    fetchHistory();
-  }, []); // Empty dependency array ensures this runs only once on mount.
+    fetchHistory(); // Fetch on initial component mount.
+    const interval = setInterval(fetchHistory, 30000); // Auto-refresh every 30 seconds.
+    return () => clearInterval(interval); // Cleanup interval on component unmount.
+  }, [fetchHistory]);
 
   const findBestMove = useCallback((currentSquares, player) => {
     const opponent = player === 'X' ? 'O' : 'X';
-    let move = -1;
 
-    for (let i = 0; i < currentSquares.length; i++) {
+    // 1. Win if possible
+    for (let i = 0; i < 9; i++) {
       if (!currentSquares[i]) {
         const tempSquares = [...currentSquares];
         tempSquares[i] = player;
@@ -117,7 +117,8 @@ function App() {
       }
     }
 
-    for (let i = 0; i < currentSquares.length; i++) {
+    // 2. Block if necessary
+    for (let i = 0; i < 9; i++) {
       if (!currentSquares[i]) {
         const tempSquares = [...currentSquares];
         tempSquares[i] = opponent;
@@ -125,6 +126,7 @@ function App() {
       }
     }
 
+    // 3. Move randomly
     const availableSquares = currentSquares
       .map((val, index) => (val === null ? index : null))
       .filter(val => val !== null);
@@ -133,7 +135,7 @@ function App() {
       return availableSquares[Math.floor(Math.random() * availableSquares.length)];
     }
 
-    return move;
+    return -1;
   }, []);
 
   // Effect for handling the game result and batching data.
@@ -155,7 +157,6 @@ function App() {
       setGameResultsBatch(prevBatch => {
         const newBatch = [...prevBatch, resultData];
         if (newBatch.length >= 10) {
-          console.log("--- Sending Batch of 10 Games to API ---");
           saveThingsToDatabase('postTicTacToeGames', newBatch);
           return [];
         }
@@ -163,7 +164,6 @@ function App() {
       });
     }
   }, [squares, moveHistory]);
-
 
   // The main game simulation loop.
   useEffect(() => {
@@ -201,7 +201,7 @@ function App() {
         setSquares(newSquares);
         setIsXNext(!isXNext);
       }
-    }, speed);
+    }, speed * .1);
 
     return () => clearTimeout(timer);
   }, [squares, isXNext, isPlaying, speed, findBestMove]);
@@ -212,12 +212,11 @@ function App() {
   const drawPercent = totalGames > 0 ? ((stats.draws / totalGames) * 100).toFixed(0) : 0;
 
   const getLineCoordinates = (line) => {
+    if (!line) return null;
     const getPercentCoords = (index) => {
       const col = index % 3;
       const row = Math.floor(index / 3);
-      const x = col * 33.33 + 16.66;
-      const y = row * 33.33 + 16.66;
-      return { x, y };
+      return { x: col * 33.33 + 16.66, y: row * 33.33 + 16.66 };
     };
     const start = getPercentCoords(line[0]);
     const end = getPercentCoords(line[2]);
@@ -230,21 +229,17 @@ function App() {
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 font-sans">
       <div className="bg-gray-800/50 p-6 md:p-8 rounded-2xl shadow-2xl backdrop-blur-sm border border-gray-700 w-full max-w-7xl">
         <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-yellow-400">
-          Tic-Tac-Toe AI Lab
+          Tic Tac Toe AI Lab
         </h1>
 
-        {/* Main Content Area: Now a 3-column layout on large screens */}
         <div className="flex flex-col lg:flex-row gap-8 md:gap-12 justify-center items-start">
 
-          {/* Column 1: Game Board */}
           <div className="relative flex-shrink-0 flex justify-center items-center">
             <div className="grid grid-cols-3 gap-3">
-              {squares.map((value, i) => (
-                <Square key={i} value={value} />
-              ))}
+              {squares.map((value, i) => <Square key={i} value={value} />)}
             </div>
             {lineCoords && (
-              <svg className="absolute top-0 left-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+              <svg className="absolute top-0 left-0 w-full h-full pointer-events-none">
                 <line
                   x1={lineCoords.x1} y1={lineCoords.y1} x2={lineCoords.x2} y2={lineCoords.y2}
                   className="stroke-red-500 animate-pulse" strokeWidth="10" strokeLinecap="round" />
@@ -252,7 +247,6 @@ function App() {
             )}
           </div>
 
-          {/* Column 2: Stats and Controls */}
           <div className="flex flex-col justify-start gap-8 w-full lg:w-64 flex-shrink-0">
             <div className="w-full text-center bg-gray-900/50 p-4 rounded-lg border border-gray-700">
               <h2 className="text-2xl font-bold mb-4 text-gray-300">Live Stats</h2>
@@ -281,10 +275,20 @@ function App() {
             </div>
           </div>
 
-          {/* Column 3: Game History Section */}
           <div className="w-full lg:flex-1">
             <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-              <h2 className="text-2xl font-bold text-center mb-4 text-gray-300">Recent Game History</h2>
+              <div className="flex items-center justify-center text-center gap-2 mb-4">
+                <h2 className="text-2xl font-bold text-gray-300">Recent Game History</h2>
+                <button
+                  onClick={fetchHistory}
+                  className="p-1.5 text-gray-400 bg-gray-700/50 rounded-full hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500 transition-colors"
+                  aria-label="Refresh game history"
+                >
+                  <svg fill="#000000" width="18px" height="18px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.146 4.854l-1.489 1.489A8 8 0 1 0 12 20a8.094 8.094 0 0 0 7.371-4.886 1 1 0 1 0-1.842-.779A6.071 6.071 0 0 1 12 18a6 6 0 1 1 4.243-10.243l-1.39 1.39a.5.5 0 0 0 .354.854H19.5A.5.5 0 0 0 20 9.5V5.207a.5.5 0 0 0-.854-.353z" />
+                  </svg>
+                </button>
+              </div>
               <div className="max-h-[24.5rem] overflow-y-auto pr-2 space-y-3">
                 {gameHistory && gameHistory.length > 0 ? gameHistory.map(game => (
                   <div key={game.id} className="bg-gray-900/50 p-3 rounded-lg flex items-center justify-between border border-gray-700 gap-4">
@@ -298,7 +302,7 @@ function App() {
                     <p className="text-xs text-gray-500">{new Date(game.finished_at).toLocaleString()}</p>
                   </div>
                 )) : (
-                  <p className="text-center text-gray-500">Loading game history or no games found...</p>
+                  <p className="text-center text-gray-500">Loading game history...</p>
                 )}
               </div>
             </div>
